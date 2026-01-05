@@ -303,9 +303,24 @@ async function boot(){
     content.textContent= e.message || '데이터 로드 실패';
   }
 }
+async function saveUserState(){
+  await fetch(API + '?action=setUserState', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(USER)
+  });
+}
 
 /* ===== USER (localStorage) ===== */
-function persistUser(){ localStorage.setItem('USER',JSON.stringify(USER)); }
+function persistUser(){
+  localStorage.setItem('USER', JSON.stringify(USER));
+
+  // GAS 환경에서만 서버 저장
+  if (window.google && google.script && google.script.run) {
+    google.script.run.setUserState(USER);
+  }
+}
+
 
 /* ===== 나머지 로직은 기존 render / cardHtml 그대로 사용 ===== */
 function buildCategories(){
@@ -458,15 +473,15 @@ function buildCategories(){
       persistUser(false);
     }
 
-    var persistTimer = null;
-    function persistUser(reRender){
-      if(reRender === undefined) reRender = true;
-      clearTimeout(persistTimer);
-      persistTimer = setTimeout(function(){
-        google.script.run.setUserState(USER);
-        if(reRender) render();
-      }, 150);
-    }
+    // var persistTimer = null;
+    // function persistUser(reRender){
+    //   if(reRender === undefined) reRender = true;
+    //   clearTimeout(persistTimer);
+    //   persistTimer = setTimeout(function(){
+    //     saveUserState();
+    //     if(reRender) render();
+    //   }, 150);
+    // }
 
     function isFav(item){
       var set = new Set(USER.favorites || []);
