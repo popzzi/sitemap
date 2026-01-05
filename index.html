@@ -178,6 +178,249 @@ async function boot(){
 function persistUser(){ localStorage.setItem('USER',JSON.stringify(USER)); }
 
 /* ===== 나머지 로직은 기존 render / cardHtml 그대로 사용 ===== */
+function buildCategories(){
+      var catsEl = document.getElementById('cats');
+      catsEl.innerHTML = '';
+
+      catsEl.appendChild(catButton('ALL', '전체', (DATA.items || []).length));
+
+      (DATA.categories || []).forEach(function(cat){
+        var count = (DATA.items || []).filter(function(x){ return x.category === cat; }).length;
+        catsEl.appendChild(catButton(cat, cat, count));
+      });
+
+      selectedCategory = 'ALL';
+      setActiveCat();
+    }
+
+    function catButton(key, label, count){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'cat-btn';
+      btn.dataset.key = key;
+      btn.innerHTML = '<span>' + escapeHtml(label) + '</span><span class="pill">' + count + '</span>';
+      btn.onclick = function(){
+        selectedCategory = key;
+        setActiveCat();
+        render();
+      };
+      return btn;
+    }
+
+    function setActiveCat(){
+      document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
+      var t = document.querySelector('.cat-btn[data-key="' + cssEscape(selectedCategory) + '"]');
+      if(t) t.classList.add('active');
+    }
+
+    function render(){
+      var list = filteredItems();
+      var title = modeTitle() + (selectedCategory === 'ALL' ? '' : ' · ' + selectedCategory);
+      document.getElementById('current').textContent = title;
+      document.getElementById('count').textContent = String(list.length);
+
+      var content = document.getElementById('content');
+
+      if(list.length === 0){
+        content.className = 'empty';
+        content.innerHTML =
+          '<div style="font-weight:700; margin-bottom:6px;">표시할 항목이 없어요</div>' +
+          '<div class="muted">검색어/카테고리/필터를 바꿔보세요.</div>';
+        return;
+      }
+
+      var cards = list.map(function(item){ return cardHtml(item); }).join('');
+      content.className = '';
+      content.innerHTML = '<div class="grid">' + cards + '</div>';
+
+      // 링크 열기
+      content.querySelectorAll('[data-action="open"]').forEach(function(a){
+        a.addEventListener('click', function(e){
+          e.preventDefault();
+          var key = a.dataset.key;
+          var url = a.dataset.url;
+          var newtab = a.dataset.newtab === 'true';
+          pushRecent(key);
+
+          if(newtab) window.open(url, '_blank', 'noopener,noreferrer');
+          else window.location.href = url;
+        });
+      });
+
+      // 즐겨찾기
+      content.querySelectorAll('[data-action="fav"]').forEach(function(s){
+        s.addEventListener('click', function(){
+          var key = s.dataset.key;
+          toggleFavorite(key);
+        });
+      });
+
+      // 이미지(아이콘/파비콘) 실패 폴백: 🔗
+      content.querySelectorAll('img.favicon').forEach(function(img){
+        img.addEventListener('error', function(){
+          img.replaceWith(document.createTextNode('🔗'));
+        }, { once:true });
+      });
+    }
+
+    function modeTitle(){
+      if(mode === 'FAV') return '즐겨찾기';
+      if(mode === 'RECENT') return '최근';
+      return '전체';
+    }
+
+    function filteredItems(){
+      var items = (DATA.items || []).slice();
+
+      if(mode === 'FAV'){
+        var set = new Set(USER.favorites || []);
+        items = items.filter(function(x){ return set.has(stableKey(x)); });
+      }else if(mode === 'RECENT'){
+        var order = USER.recents || [];
+        var map = new Map(items.map(function(x){ return [stableKey(x), x]; }));
+        items = order.map(function(k){ return map.get(k); }).filter(Boolean);
+      }
+
+      if(selectedCategory !== 'ALL'){
+        items = items.filter(function(x){ return x.category === selectedCategory; });
+      }
+
+      if(query){
+        var q = query.toLowerCase();
+        items = items.filter(function(x){
+          var hay = [x.name, x.desc, x.category, (x.tags || []).join(' ')].join(' ').toLowerCase();
+          return hay.indexOf(q) !== -1;
+        });
+      }
+
+      if(mode !== 'RECENT'){
+        items.sort(function(a,b){
+          var ac = String(a.category || '');
+          var bc = String(b.category || '');
+          if(ac !== bc) return ac.localeCompare(bc, 'ko');
+          var as = Number(a.sort || 9999);
+          var bs = Number(b.sort || 9999);
+          if(as !== bs) return as - bs;
+          return String(a.name || '').localeCompare(String(b.name || ''), 'ko');
+        });
+      }
+
+      return items;
+    }
+
+    // ===== favorites / recents =====
+    function stableKey(item){
+      return String(item.url || '') + '||' + String(item.name || '');
+    }
+
+    function toggleFavorite(key){
+      var fav = new Set(USER.favorites || []);
+      if(fav.has(key)) fav.delete(key); else fav.add(key);
+      USER.favorites = Array.from(fav);
+      persistUser();
+      render();
+    }
+
+    function pushRecent(key){
+      var arr = USER.recents || [];
+      var next = [key].concat(arr.filter(function(x){ return x !== key; })).slice(0, 20);
+      USER.recents = next;
+      persistUser(false);
+    }
+
+    var persistTimer = null;
+    function persistUser(reRender){
+      if(reRender === undefined) reRender = true;
+      clearTimeout(persistTimer);
+      persistTimer = setTimeout(function(){
+        google.script.run.setUserState(USER);
+        if(reRender) render();
+      }, 150);
+    }
+
+    function isFav(item){
+      var set = new Set(USER.favorites || []);
+      return set.has(stableKey(item));
+    }
+
+    // ===== favicon fallback =====
+    function getFaviconUrl(pageUrl){
+      try{
+        var u = new URL(pageUrl);
+        return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(u.hostname) + '&sz=64';
+      }catch(e){
+        return '';
+      }
+    }
+
+    // ===== card UI =====
+    function cardHtml(item){
+      var key = stableKey(item);
+      var favOn = isFav(item);
+
+      // ✅ 우선순위: 시트 icon(=IMAGE("url")에서 추출된 URL) > 파비콘 > (실패 시 🔗)
+      var iconHtml;
+      if(item.icon){
+        iconHtml = '<img class="favicon" src="' + escapeAttr(item.icon) + '" alt="" loading="lazy">';
+      }else{
+        iconHtml = '<img class="favicon" src="' + escapeAttr(getFaviconUrl(item.url)) + '" alt="" loading="lazy">';
+      }
+
+      var tags = (item.tags || []).slice(0,4).map(function(t){
+        return '<span class="tag">' + escapeHtml(t) + '</span>';
+      }).join('');
+
+      var pr = item.priority ? '<span class="tag priority">' + escapeHtml(item.priority) + '</span>' : '';
+
+      return (
+        '<div class="card">' +
+          '<div class="row">' +
+            '<div class="title">' +
+              '<div class="icon">' + iconHtml + '</div>' +
+              '<div>' +
+                '<div>' + escapeHtml(item.name) + '</div>' +
+                '<div class="muted" style="margin-top:2px;">' + escapeHtml(item.category) + '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="actions">' +
+              '<div class="star ' + (favOn ? 'on' : '') + '" title="즐겨찾기" data-action="fav" data-key="' + escapeAttr(key) + '">' +
+                (favOn ? '★' : '☆') +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="desc">' + escapeHtml(item.desc || '설명 없음') + '</div>' +
+
+          '<div class="meta">' + pr + tags + '</div>' +
+
+          '<div style="display:flex; gap:8px; align-items:center; margin-top:auto;">' +
+            '<a class="btn" href="' + escapeAttr(item.url) + '"' +
+              ' data-action="open"' +
+              ' data-key="' + escapeAttr(key) + '"' +
+              ' data-url="' + escapeAttr(item.url) + '"' +
+              ' data-newtab="' + (item.newtab ? 'true' : 'false') + '">' +
+              '열기' +
+            '</a>' +
+            '<div class="muted url-text" title="' + escapeAttr(item.url) + '">' + escapeHtml(item.url) + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+  // ===== utils =====
+    function escapeHtml(str){
+      return String(str == null ? '' : str)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'","&#39;");
+    }
+    function escapeAttr(str){
+      return escapeHtml(str).replaceAll('`','&#96;');
+    }
+    function cssEscape(str){
+      return String(str == null ? '' : str).replaceAll('"','\\"');
+    }
 </script>
 </body>
 </html>
