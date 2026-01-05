@@ -170,7 +170,7 @@ async function boot(){
     render();
   }catch(e){
     content.className='empty';
-    content.textContent='데이터 로드 실패';
+    content.textContent= e.message || '데이터 로드 실패';
   }
 }
 
