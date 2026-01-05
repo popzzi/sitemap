@@ -91,8 +91,30 @@ var mode = 'ALL';
 var query = '';
 
 /* ===== init ===== */
-document.getElementById('q').oninput = e => { query=e.target.value.trim(); render(); };
-document.getElementById('refresh').onclick = () => boot();
+document.addEventListener('DOMContentLoaded', function () {
+
+  // ===== init =====
+  document.getElementById('q').addEventListener('input', function (e) {
+    query = (e.target.value || '').trim();
+    render();
+  });
+
+  document.getElementById('refresh').addEventListener('click', function () {
+    boot(false);
+  });
+
+  var chipAll = document.getElementById('chipAll');
+  var chipFav = document.getElementById('chipFav');
+  var chipRecent = document.getElementById('chipRecent');
+
+  chipAll.onclick = function(){ mode='ALL'; setChip(); render(); };
+  chipFav.onclick = function(){ mode='FAV'; setChip(); render(); };
+  chipRecent.onclick = function(){ mode='RECENT'; setChip(); render(); };
+
+  // 초기 로드
+  boot(false);
+
+});
 
 /* ===== fetch 기반 boot ===== */
 async function boot(){
