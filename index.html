@@ -82,11 +82,22 @@
     .icon{width:35px;height:35px;border-radius:10px;display:grid;place-items:center;}
     .icon img{width:25px;height:25px}
     .btn{
+      flex:0 0 auto;
+      min-width:64px;
+      white-space:nowrap;
+      text-align:center;
       border:1px solid var(--line);
       background:rgba(0,0,0,.14);
       color:var(--text);
       padding:8px 10px;border-radius:12px;
       cursor:pointer;font-size:12px;
+    }
+    .url-text{
+      flex:1 1 auto;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
     .star{cursor:pointer;font-size:18px}
     .star.on{color:#ffd666}
@@ -212,24 +223,41 @@ function card(item){
   const k=keyOf(item);
   const fav=USER.favorites.includes(k);
   return `
-  <div class="card">
-    <div style="display:flex;justify-content:space-between">
-      <div style="display:flex;gap:8px">
-        <div class="icon">
-          ${item.icon ? `<img src="${item.icon}">` : '🔗'}
-        </div>
-        <div>
-          <div>${item.name}</div>
-          <div class="muted">${item.category}</div>
-        </div>
+<div class="card">
+  <div class="row">
+    <div class="title">
+      <div class="icon">
+        ${item.icon ? `<img class="favicon" src="${item.icon}">` : '🔗'}
       </div>
-      <div class="star ${fav?'on':''}" onclick="toggleFav('${k}')">
-        ${fav?'★':'☆'}
+      <div>
+        <div>${item.name}</div>
+        <div class="muted" style="margin-top:2px;">${item.category}</div>
       </div>
     </div>
-    <div class="muted">${item.desc||''}</div>
-    <a class="btn" href="${item.url}" target="${item.newtab?'_blank':'_self'}">열기</a>
-  </div>`;
+
+    <div class="actions">
+      <div class="star ${fav?'on':''}"
+           title="즐겨찾기"
+           onclick="toggleFav('${k}')">
+        ${fav ? '★' : '☆'}
+      </div>
+    </div>
+  </div>
+
+  <div class="desc">${item.desc || '설명 없음'}</div>
+
+  <div style="display:flex; gap:8px; align-items:center; margin-top:auto;">
+    <a class="btn"
+       href="${item.url}"
+       target="${item.newtab ? '_blank' : '_self'}">
+       열기
+    </a>
+    <div class="muted url-text"
+         title="${item.url}">
+      ${item.url}
+    </div>
+  </div>
+</div>`;
 }
 
 function keyOf(i){return i.url+'||'+i.name}
