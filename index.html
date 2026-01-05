@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>사이트맵</title>
+  <meta name="description" content="스프레드시트 연동 링크 허브" />
+
+  <style>
+    :root{
+      --text:#e8eefc;
+      --muted:#a7b4d6;
+      --line:rgba(255,255,255,.08);
+      --accent:#7aa2ff;
+      --accent2:#52d6a8;
+      --shadow: 0 10px 30px rgba(0,0,0,.25);
+      --radius:16px;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Noto Sans KR", Arial, sans-serif;
+      background: linear-gradient(180deg, #070b14, #0b1220 40%, #07101f);
+      color:var(--text);
+    }
+    .app{display:flex;height:100vh;width:100%;overflow:hidden;}
+    aside{
+      width:320px;min-width:280px;
+      background: rgba(15,26,48,.85);
+      border-right:1px solid var(--line);
+      padding:18px;overflow:auto;
+      backdrop-filter: blur(10px);
+    }
+    main{flex:1;padding:18px;overflow:auto;}
+    .brand{display:flex;align-items:center;gap:4px;padding:5px;}
+    .logo{
+      width:37px;height:37px;
+      background-image:url(https://img.icons8.com/?size=100&id=SQ7k596FkHLa&format=png&color=000000);
+      background-size:cover;
+    }
+    .brand h1{font-size:16px;margin:0}
+    .brand p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+    .search{margin:8px 0 14px;position:sticky;top:0}
+    .search input{
+      width:100%;padding:12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+    }
+    .section-title{
+      font-size:12px;color:var(--muted);
+      margin:14px 6px 8px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .cat-list{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;}
+    .cat-btn{
+      display:flex;justify-content:space-between;
+      padding:10px 12px;border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      color:var(--text);
+      cursor:pointer;
+    }
+    .cat-btn.active{outline:2px solid rgba(122,162,255,.45);}
+    .pill{
+      font-size:12px;color:var(--muted);
+      border:1px solid var(--line);
+      padding:2px 8px;border-radius:999px;
+    }
+    .topbar{display:flex;justify-content:space-between;margin-bottom:12px;}
+    .grid{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:12px;}
+    @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(max-width:700px){aside{display:none}.grid{grid-template-columns:1fr}}
+    .card{
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      background:rgba(17,31,58,.65);
+      padding:14px;display:flex;flex-direction:column;gap:10px;
+    }
+    .icon{width:35px;height:35px;border-radius:10px;display:grid;place-items:center;}
+    .icon img{width:25px;height:25px}
+    .btn{
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.14);
+      color:var(--text);
+      padding:8px 10px;border-radius:12px;
+      cursor:pointer;font-size:12px;
+    }
+    .star{cursor:pointer;font-size:18px}
+    .star.on{color:#ffd666}
+    .muted{color:var(--muted);font-size:12px}
+    a{color:inherit;text-decoration:none}
+    .loading,.empty{padding:18px;border:1px dashed var(--line);border-radius:var(--radius)}
+  </style>
+</head>
+
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>사이트맵</h1>
+        <p class="muted">스프레드시트 연동 링크 허브</p>
+      </div>
+    </div>
+
+    <div class="search">
+      <input id="q" placeholder="검색…" />
+    </div>
+
+    <div class="section-title">카테고리</div>
+    <div id="cats" class="cat-list"></div>
+
+    <div class="section-title">필터</div>
+    <div style="display:flex;gap:8px;">
+      <div id="chipAll" class="btn">전체</div>
+      <div id="chipFav" class="btn">즐겨찾기</div>
+      <div id="chipRecent" class="btn">최근</div>
+    </div>
+  </aside>
+
+  <main>
+    <div class="topbar">
+      <div id="current" class="muted">로딩 중…</div>
+      <button id="refresh" class="btn">새로고침</button>
+    </div>
+    <div id="content" class="loading">데이터를 불러오는 중…</div>
+  </main>
+</div>
+
+<script>
+/* ======================
+   설정
+====================== */
+const API = "https://script.google.com/macros/s/AKfycbxvID6a8BAAeqj0HJ1bw1D87xZCYDQqOVXStubkQLCfz-l3i7ok6YrGPIL-cutJLHo05A/exec";
+
+/* ======================
+   상태
+====================== */
+let DATA = { categories:[], items:[] };
+let USER = JSON.parse(localStorage.getItem('USER') || '{"favorites":[],"recents":[]}');
+let selectedCategory = 'ALL';
+let mode = 'ALL';
+let query = '';
+
+/* ======================
+   초기화
+====================== */
+q.oninput = e => { query = e.target.value.trim(); render(); };
+refresh.onclick = () => boot();
+chipAll.onclick = () => { mode='ALL'; render(); };
+chipFav.onclick = () => { mode='FAV'; render(); };
+chipRecent.onclick = () => { mode='RECENT'; render(); };
+
+boot();
+
+/* ======================
+   데이터 로드
+====================== */
+async function boot(){
+  content.textContent = '데이터를 불러오는 중…';
+  try{
+    const res = await fetch(API + '?action=links');
+    DATA = await res.json();
+    buildCategories();
+    render();
+  }catch(e){
+    content.textContent = '로드 실패';
+  }
+}
+
+/* ======================
+   렌더링
+====================== */
+function buildCategories(){
+  cats.innerHTML='';
+  cats.append(catBtn('ALL','전체',DATA.items.length));
+  DATA.categories.forEach(c=>{
+    cats.append(catBtn(c,c,DATA.items.filter(x=>x.category===c).length));
+  });
+}
+function catBtn(k,l,c){
+  const b=document.createElement('button');
+  b.className='cat-btn';
+  b.innerHTML=`<span>${l}</span><span class="pill">${c}</span>`;
+  b.onclick=()=>{selectedCategory=k;render()};
+  return b;
+}
+
+function render(){
+  let list = DATA.items.slice();
+  if(mode==='FAV'){
+    const s=new Set(USER.favorites||[]);
+    list=list.filter(x=>s.has(keyOf(x)));
+  }
+  if(selectedCategory!=='ALL'){
+    list=list.filter(x=>x.category===selectedCategory);
+  }
+  if(query){
+    const q=query.toLowerCase();
+    list=list.filter(x=>(x.name+x.desc).toLowerCase().includes(q));
+  }
+  content.innerHTML = list.length
+    ? `<div class="grid">${list.map(card).join('')}</div>`
+    : '<div class="empty">표시할 항목이 없습니다</div>';
+}
+
+function card(item){
+  const k=keyOf(item);
+  const fav=USER.favorites.includes(k);
+  return `
+  <div class="card">
+    <div style="display:flex;justify-content:space-between">
+      <div style="display:flex;gap:8px">
+        <div class="icon">
+          ${item.icon ? `<img src="${item.icon}">` : '🔗'}
+        </div>
+        <div>
+          <div>${item.name}</div>
+          <div class="muted">${item.category}</div>
+        </div>
+      </div>
+      <div class="star ${fav?'on':''}" onclick="toggleFav('${k}')">
+        ${fav?'★':'☆'}
+      </div>
+    </div>
+    <div class="muted">${item.desc||''}</div>
+    <a class="btn" href="${item.url}" target="${item.newtab?'_blank':'_self'}">열기</a>
+  </div>`;
+}
+
+function keyOf(i){return i.url+'||'+i.name}
+function toggleFav(k){
+  const s=new Set(USER.favorites||[]);
+  s.has(k)?s.delete(k):s.add(k);
+  USER.favorites=[...s];
+  localStorage.setItem('USER',JSON.stringify(USER));
+  render();
+}
+</script>
+</body>
+</html>
