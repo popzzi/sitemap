@@ -282,6 +282,12 @@ document.addEventListener('DOMContentLoaded', function () {
   chipFav.onclick = function(){ mode='FAV'; setChip(); render(); };
   chipRecent.onclick = function(){ mode='RECENT'; setChip(); render(); };
 
+  function setChip(){
+    [chipAll, chipFav, chipRecent].forEach(function(x){ x.classList.remove('active'); });
+    if(mode==='ALL') chipAll.classList.add('active');
+    if(mode==='FAV') chipFav.classList.add('active');
+    if(mode==='RECENT') chipRecent.classList.add('active');
+  }
   // 초기 로드
   boot(false);
 
