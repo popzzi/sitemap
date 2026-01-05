@@ -75,8 +75,49 @@
 
 <body>
 <div class="app">
-  <!-- ===== HTML 구조 원본 그대로 ===== -->
-  <!-- (중략: aside / main 구조 동일) -->
+  <aside>
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>사이트맵</h1>
+          <p class="muted">스프레드시트 연동 링크 허브</p>
+        </div>
+      </div>
+
+      <div class="search">
+        <input id="q" placeholder="검색: 서비스명, 설명, 태그…" />
+      </div>
+
+      <div class="section-title">카테고리</div>
+      <div id="cats" class="cat-list"></div>
+
+      <div class="section-title">필터</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; padding:0 2px 10px;">
+        <div id="chipAll" class="chip active">전체</div>
+        <div id="chipFav" class="chip">즐겨찾기</div>
+        <div id="chipRecent" class="chip">최근</div>
+      </div>
+
+      <div class="muted" style="padding: 6px 6px 14px; line-height:1.5;">
+        • 링크 추가/수정은 관리자 계정의 구글 스프레드시트 Links 시트에서 일괄 관리됩니다.<br/>
+        • 즐겨찾기/최근은 개인별로 저장돼요.<br/><br/>
+        @ 2025 Hzzin. all rights reserved.
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div class="left">
+          <div id="current" class="muted">로딩 중…</div>
+          <div id="count" class="pill">0</div>
+        </div>
+        <div class="actions">
+          <button class="btn" id="refresh" type="button">새로고침</button>
+        </div>
+      </div>
+
+      <div id="content" class="loading">데이터를 불러오는 중…</div>
+    </main>
 </div>
 
 <script>
