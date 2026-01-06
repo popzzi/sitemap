@@ -446,12 +446,12 @@ function buildCategories(){
 
       if(mode !== 'RECENT'){
         items.sort(function(a,b){
-          console.log(a.sort, b.sort, a);
           var ac = String(a.category || '');
           var bc = String(b.category || '');
           if(ac !== bc) return ac.localeCompare(bc, 'ko');
           var as = Number(a.sort || 9999);
           var bs = Number(b.sort || 9999);
+          console.log(as, bs, a);
           if(as !== bs) return as - bs;
           return String(a.name || '').localeCompare(String(b.name || ''), 'ko');
         });
