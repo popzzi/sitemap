@@ -446,6 +446,7 @@ function buildCategories(){
 
       if(mode !== 'RECENT'){
         items.sort(function(a,b){
+          console.log(a.sort, b.sort, a);
           var ac = String(a.category || '');
           var bc = String(b.category || '');
           if(ac !== bc) return ac.localeCompare(bc, 'ko');
