@@ -404,6 +404,7 @@ function buildCategories(){
     }
 
     function render(){
+      document.querySelector('main').scrollTo(0, 0);
       var list = filteredItems();
       var title = modeTitle() + (selectedCategory === 'ALL' ? '' : ' · ' + selectedCategory);
       document.getElementById('current').textContent = title;
