@@ -338,7 +338,14 @@ async function boot(){
   content.textContent='데이터를 불러오는 중…';
 
   try{
-    const res = await fetch(API+'?action=links');
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminKey = urlParams.get('admin');
+
+    let fetchUrl = API + '?action=links';
+    if (adminKey) {
+      fetchUrl += `&admin=${adminKey}`;
+    }
+    const res = await fetch(fetchUrl);
     DATA = await res.json();
     buildCategories();
     render();
